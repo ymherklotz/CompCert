@@ -179,7 +179,8 @@ let pp_instructions pp ic =
         | EF_memcpy _
         | EF_runtime _
         | EF_vload _
-        | EF_vstore _ -> assert false
+        | EF_vstore _
+        | EF_select _ -> assert false
       end
     (* Stackframe, should not occur *)
     | Pallocframe _ -> assert false

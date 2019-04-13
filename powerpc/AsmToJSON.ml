@@ -369,7 +369,8 @@ let pp_instructions pp ic =
       | EF_memcpy _
       | EF_runtime _
       | EF_vload _
-      | EF_vstore _ -> assert false
+      | EF_vstore _
+      | EF_select _ -> assert false
     end
   | Pcfi_adjust _  (* Only debug relevant *)
   | Pcfi_rel_offset _ -> assert false in (* Only debug relevant *)

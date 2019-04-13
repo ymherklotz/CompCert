@@ -1377,6 +1377,59 @@ Proof.
   split. constructor. auto.
 Qed.
 
+(** ** Semantics of the [select] built-in *)
+
+Inductive extcall_select_sem (ty: typ) (ge: Senv.t):
+              list val -> mem -> trace -> val -> mem -> Prop :=
+  | extcall_select_sem_intro: forall v1 v2 v3 m b,
+      Val.bool_of_val v1 b ->
+      extcall_select_sem ty ge (v1 :: v2 :: v3 :: nil) m
+                            E0 (Val.normalize (if b then v2 else v3) ty) m.
+
+Lemma extcall_select_ok: forall ty,
+  extcall_properties (extcall_select_sem ty)
+                     (mksignature (Tint :: ty :: ty :: nil) (Some ty) cc_default).
+Proof.
+  constructor; intros.
+(* well typed *)
+- inv H. unfold proj_sig_res. simpl. apply Val.normalize_type.
+(* symbols preserved *)
+- inv H0; econstructor; eauto.
+(* valid block *)
+- inv H; auto.
+(* perms *)
+- inv H; auto.
+(* readonly *)
+- inv H. apply Mem.unchanged_on_refl.
+(* mem extends *)
+- inv H. inv H1. inv H6. inv H7. inv H8.
+  assert (Val.bool_of_val v4 b). { inv H2; inv H4; constructor. }
+  exists (Val.normalize (if b then v5 else v6) ty), m1'.
+  split. econstructor; eauto.
+  split. apply Val.normalize_lessdef. destruct b; auto.
+  auto using Mem.unchanged_on_refl.
+(* mem inject *)
+- inv H0. inv H2. inv H7. inv H8. inv H9.
+  assert (Val.bool_of_val v' b). { inv H3; inv H5; constructor. }
+  exists f, (Val.normalize (if b then v'0 else v'1) ty), m1'.
+  split. econstructor; eauto.
+  split. apply Val.normalize_inject. destruct b; auto.
+  split. auto.
+  split. apply Mem.unchanged_on_refl.
+  split. apply Mem.unchanged_on_refl.
+  split. apply inject_incr_refl.
+  red; intros; congruence.
+(* trace length *)
+- inv H; simpl; omega.
+(* receptive *)
+- assert (t1 = t2). inv H; inv H0; auto. subst t2.
+  exists vres1; exists m1; auto.
+(* determ *)
+- inv H; inv H0.
+  assert (b = b0) by (inv H1; inv H8; auto). subst b0.
+  split; auto. constructor.
+Qed.
+
 (** ** Semantics of external functions. *)
 
 (** For functions defined outside the program ([EF_external],
@@ -1423,6 +1476,7 @@ Definition external_call (ef: external_function): extcall_sem :=
   | EF_annot_val kind txt targ => extcall_annot_val_sem txt targ
   | EF_inline_asm txt sg clb => inline_assembly_sem txt sg
   | EF_debug kind txt targs => extcall_debug_sem
+  | EF_select ty         => extcall_select_sem ty
   end.
 
 Theorem external_call_spec:
@@ -1442,6 +1496,7 @@ Proof.
   apply extcall_annot_val_ok.
   apply inline_assembly_properties.
   apply extcall_debug_ok.
+  apply extcall_select_ok.
 Qed.
 
 Definition external_call_well_typed ef := ec_well_typed (external_call_spec ef).

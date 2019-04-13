@@ -269,6 +269,8 @@ let external_function p = function
               coqstring text
               signatur sg
               (print_list coqstring) clob
+  | EF_select ty ->
+      fprintf p "@[<hov 2>(EF_select %a)@]" asttype ty
 
 (* Expressions *)
 

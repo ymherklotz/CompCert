@@ -465,10 +465,17 @@ Inductive external_function : Type :=
          used with caution, as it can invalidate the semantic
          preservation theorem.  Generated only if [-finline-asm] is
          given. *)
-  | EF_debug (kind: positive) (text: ident) (targs: list typ).
+  | EF_debug (kind: positive) (text: ident) (targs: list typ)
      (** Transport debugging information from the front-end to the generated
          assembly.  Takes zero, one or several arguments like [EF_annot].
          Unlike [EF_annot], produces no observable event. *)
+  | EF_select (ty: typ).
+     (** Conditional expression with strict semantics, also known as
+         "conditional move".
+         Takes a boolean [b] and two values [v1], [v2] of type [ty].
+         Returns [v1] if [b] is true, [v2] if [b] is false.
+         This builtin is expanded to a conditional move instruction
+         or a branchless instruction sequence when possible. *)
 
 (** The type signature of an external function. *)
 
@@ -486,6 +493,7 @@ Definition ef_sig (ef: external_function): signature :=
   | EF_annot_val kind text targ => mksignature (targ :: nil) (Some targ) cc_default
   | EF_inline_asm text sg clob => sg
   | EF_debug kind text targs => mksignature targs None cc_default
+  | EF_select ty => mksignature (Tint :: ty :: ty :: nil) (Some ty) cc_default
   end.
 
 (** Whether an external function should be inlined by the compiler. *)
@@ -504,6 +512,7 @@ Definition ef_inline (ef: external_function) : bool :=
   | EF_annot_val kind Text rg => true
   | EF_inline_asm text sg clob => true
   | EF_debug kind text targs => true
+  | EF_select ty => true
   end.
 
 (** Whether an external function must reload its arguments. *)

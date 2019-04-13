@@ -43,6 +43,12 @@ Function condexpr_of_expr (e: expr) : condexpr :=
   | _ => CEcond (Ccompuimm Cne Int.zero) (e ::: Enil)
   end.
 
+Function condition_of_expr (e: expr) : condition * exprlist :=
+  match e with
+  | Eop (Ocmp c) el => (c, el)
+  | _ => (Ccompuimm Cne Int.zero, e ::: Enil)
+  end.
+
 (** Conversion of loads and stores *)
 
 Definition load (chunk: memory_chunk) (e1: expr) :=
@@ -156,6 +162,13 @@ Definition sel_binop (op: Cminor.binary_operation) (arg1 arg2: expr) : expr :=
   | Cminor.Ocmplu c => cmplu c arg1 arg2
   end.
 
+Definition sel_select (ty: typ) (arg1 arg2 arg3: expr) : expr :=
+  let (cond, args) := condition_of_expr arg1 in
+  match select ty cond args arg2 arg3 with
+  | Some e => e
+  | None   => Econdition (condexpr_of_expr arg1) arg2 arg3
+  end.
+
 (** Conversion from Cminor expression to Cminorsel expressions *)
 
 Fixpoint sel_expr (a: Cminor.expr) : expr :=
@@ -221,6 +234,20 @@ Definition sel_builtin_res (optid: option ident) : builtin_res ident :=
   | Some id => BR id
   end.
 
+Definition sel_builtin_default (optid: option ident) (ef: external_function)
+                               (args: list Cminor.expr) :=
+  Sbuiltin (sel_builtin_res optid) ef
+           (sel_builtin_args args (Machregs.builtin_constraints ef)).
+
+Function sel_builtin (optid: option ident) (ef: external_function)
+                     (args: list Cminor.expr) :=
+  match ef, optid, args with
+  | EF_select ty, Some id, e1 :: e2 :: e3 :: nil =>
+      Sassign id (sel_select ty (sel_expr e1) (sel_expr e2) (sel_expr e3))
+  | _, _, _ =>
+      sel_builtin_default optid ef args
+  end.
+
 (** Conversion of Cminor [switch] statements to decision trees. *)
 
 Parameter compile_switch: Z -> nat -> table -> comptree.
@@ -278,13 +305,10 @@ Fixpoint sel_stmt (s: Cminor.stmt) : res stmt :=
       OK (match classify_call fn with
       | Call_default => Scall optid sg (inl _ (sel_expr fn)) (sel_exprlist args)
       | Call_imm id  => Scall optid sg (inr _ id) (sel_exprlist args)
-      | Call_builtin ef => Sbuiltin (sel_builtin_res optid) ef
-                                    (sel_builtin_args args
-                                       (Machregs.builtin_constraints ef))
+      | Call_builtin ef => sel_builtin optid ef args
       end)
   | Cminor.Sbuiltin optid ef args =>
-      OK (Sbuiltin (sel_builtin_res optid) ef
-                   (sel_builtin_args args (Machregs.builtin_constraints ef)))
+      OK (sel_builtin optid ef args)
   | Cminor.Stailcall sg fn args =>
       OK (match classify_call fn with
       | Call_imm id  => Stailcall sg (inr _ id) (sel_exprlist args)
