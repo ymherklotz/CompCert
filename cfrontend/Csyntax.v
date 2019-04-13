@@ -100,6 +100,16 @@ Definition Epreincr (id: incr_or_decr) (l: expr) (ty: type) :=
   Eassignop (match id with Incr => Oadd | Decr => Osub end)
             l (Eval (Vint Int.one) type_int32s) (typeconv ty) ty.
 
+(** Selection is a conditional expression that always evaluates both arms
+  and can be implemented by "conditional move" instructions.
+  It is expressed as an invocation of a builtin function. *)
+
+Definition Eselection (r1 r2 r3: expr) (ty: type) :=
+  Ebuiltin (EF_select (typ_of_type ty))
+           (Tcons type_bool (Tcons ty (Tcons ty Tnil)))
+           (Econs r1 (Econs r2 (Econs r3 Enil)))
+           ty.
+
 (** Extract the type part of a type-annotated expression. *)
 
 Definition typeof (a: expr) : type :=
