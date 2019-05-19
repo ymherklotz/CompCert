@@ -33,6 +33,7 @@ Require SimplExpr.
 Require SimplLocals.
 Require Cshmgen.
 Require Cminorgen.
+Require Ifconv.
 Require Selection.
 Require RTLgen.
 Require Tailcall.
@@ -54,6 +55,7 @@ Require SimplExprproof.
 Require SimplLocalsproof.
 Require Cshmgenproof.
 Require Cminorgenproof.
+Require Ifconvproof.
 Require Selectionproof.
 Require RTLgenproof.
 Require Tailcallproof.
@@ -149,6 +151,7 @@ Definition transf_rtl_program (f: RTL.program) : res Asm.program :=
 Definition transf_cminor_program (p: Cminor.program) : res Asm.program :=
    OK p
    @@ print print_Cminor
+  @@@ time "If-conversion" Ifconv.transf_program
   @@@ time "Instruction selection" Selection.sel_program
   @@@ time "RTL generation" RTLgen.transl_program
   @@@ transf_rtl_program.
@@ -233,6 +236,7 @@ Definition CompCert's_passes :=
   ::: mkpass SimplLocalsproof.match_prog
   ::: mkpass Cshmgenproof.match_prog
   ::: mkpass Cminorgenproof.match_prog
+  ::: mkpass Ifconvproof.match_prog
   ::: mkpass Selectionproof.match_prog
   ::: mkpass RTLgenproof.match_prog
   ::: mkpass (match_if Compopts.optim_tailcalls Tailcallproof.match_prog)
@@ -275,7 +279,8 @@ Proof.
   destruct (Cshmgen.transl_program p2) as [p3|e] eqn:P3; simpl in T; try discriminate.
   destruct (Cminorgen.transl_program p3) as [p4|e] eqn:P4; simpl in T; try discriminate.
   unfold transf_cminor_program, time in T. rewrite ! compose_print_identity in T. simpl in T.
-  destruct (Selection.sel_program p4) as [p5|e] eqn:P5; simpl in T; try discriminate.
+  destruct (Ifconv.transf_program p4) as [p41|e] eqn:P41; simpl in T; try discriminate.
+  destruct (Selection.sel_program p41) as [p5|e] eqn:P5; simpl in T; try discriminate.
   destruct (RTLgen.transl_program p5) as [p6|e] eqn:P6; simpl in T; try discriminate.
   unfold transf_rtl_program, time in T. rewrite ! compose_print_identity in T. simpl in T.
   set (p7 := total_if optim_tailcalls Tailcall.transf_program p6) in *.
@@ -297,6 +302,7 @@ Proof.
   exists p2; split. apply SimplLocalsproof.match_transf_program; auto.
   exists p3; split. apply Cshmgenproof.transf_program_match; auto.
   exists p4; split. apply Cminorgenproof.transf_program_match; auto.
+  exists p41; split. apply Ifconvproof.transf_program_match; auto.
   exists p5; split. apply Selectionproof.transf_program_match; auto.
   exists p6; split. apply RTLgenproof.transf_program_match; auto.
   exists p7; split. apply total_if_match. apply Tailcallproof.transf_program_match.
@@ -364,7 +370,7 @@ Ltac DestructM :=
       destruct H as (p & M & MM); clear H
   end.
   repeat DestructM. subst tp.
-  assert (F: forward_simulation (Cstrategy.semantics p) (Asm.semantics p21)).
+  assert (F: forward_simulation (Cstrategy.semantics p) (Asm.semantics p22)).
   {
   eapply compose_forward_simulations.
     eapply SimplExprproof.transl_program_correct; eassumption.
@@ -374,6 +380,8 @@ Ltac DestructM :=
     eapply Cshmgenproof.transl_program_correct; eassumption.
   eapply compose_forward_simulations.
     eapply Cminorgenproof.transl_program_correct; eassumption.
+  eapply compose_forward_simulations.
+    eapply Ifconvproof.transf_program_correct; eassumption.
   eapply compose_forward_simulations.
     eapply Selectionproof.transf_program_correct; eassumption.
   eapply compose_forward_simulations.
