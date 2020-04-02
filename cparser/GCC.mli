@@ -15,5 +15,4 @@
 
 (* GCC built-ins and attributes *)
 
-val builtins: Builtins.t
 val attributes: (string * Cutil.attribute_class) list

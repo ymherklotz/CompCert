@@ -1,0 +1,1 @@
+(dirs :standard \ aarch64 arm x86_32 riscV powerpc extraction)
