@@ -87,9 +87,6 @@ let static_called_once id io =
 
 let should_inline (io: inlining_info) (id: ident) (f: coq_function) =
   if !Clflags.option_finline then begin
-    match C2C.atom_inline id with
-    | C2C.Inline -> true
-    | C2C.Noinline -> false
-    | C2C.No_specifier -> static_called_once id io
+    true
   end else
     false
