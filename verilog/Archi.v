@@ -28,6 +28,9 @@ Definition align_float64 := 4%Z.
 
 Definition splitlong := false.
 
+Lemma splitlong_ptr32: splitlong = true -> ptr64 = false.
+Proof. discriminate. Qed.
+
 Definition default_nan_64 := (true, iter_nat 51 _ xO xH).
 Definition default_nan_32 := (true, iter_nat 22 _ xO xH).
 
