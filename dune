@@ -1,1 +1,1 @@
-(dirs :standard \ aarch64 arm x86_32 riscV powerpc extraction)
+(dirs :standard \ aarch64 arm x86_32 riscV powerpc extraction x86 x86_64)
