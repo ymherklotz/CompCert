@@ -85,8 +85,14 @@ let static_called_once id io =
 
 (* To be considered: heuristics based on size of function? *)
 
+let arg_in_mem_op reg_list op =
+  match op with
+  | Istore _ | Iload _ -> true
+  | _ -> false
+
 let should_inline (io: inlining_info) (id: ident) (f: coq_function) =
   if !Clflags.option_finline then begin
-    true
+    List.exists (arg_in_mem_op f.fn_params)
+      (PTree.elements f.fn_code |> List.map snd)
   end else
     false
